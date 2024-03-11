@@ -1,0 +1,261 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+In this vignette, I show you how to extract common features from acidification curves, such as the Ta (time to acidification), Vmax (maximum velocity), time to pH, and pH after hours.
+
+\
+To follow this vignette we go to the library and pick up the following packages:
+
+```{r}
+library(verbs)
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+```
+
+We also need the \*data_raw\* data set supplied with the package.
+
+```{r}
+data <- read.csv('../data/acidification_data.csv')
+```
+
+```{r}
+raw_curves <- data %>% separate(.sample_name, c("Plate", "well", "chcc"), "_") %>% 
+  rename(hours = .variable,
+         pH = .value) |>
+  mutate(minutes = hours * 60) |> 
+  group_by(across(-c(.x, .y, .unit, .topo, .unit_clust, .unit_dist, .dist, .sample_id, hours, pH, .variable_no, .ux, .uy, minutes))) |> 
+  mutate(id = cur_group_id()) # %>% 
+  #filter(Plate == "Lc-29") %>%
+  #filter(.map_name == "salt tolerance_b-milk_30_0")
+
+curves <- raw_curves |> 
+  smooth_spline(minutes, pH, as = 'fit') |> 
+  mutate(res = pH - fit)
+
+p <- curves |>
+  ggplot(aes(x = hours, y = fit)) + 
+  geom_line(alpha = 0.015, aes(group = id))
+
+p
+```
+
+```{r}
+curves |>
+  ggplot(aes(x = hours, y = res, group = id)) + 
+  geom_line(alpha = 0.1)
+```
+
+```{r}
+Ta <- curves |> 
+  lag_phase(x = minutes, y = fit, wait = 15, change = -0.08, as = 'Ta') |> 
+  mutate(Ta_hours = Ta_time / 60)
+
+Ta |> ungroup() |> select(Ta_time, Ta_hours, Ta_value) |>  head()
+```
+
+```{r}
+Vmax <- curves |>
+  filter(hours < 10) |>
+  filter(hours > 1) |>
+  grad(x = minutes, y = fit, as = 'velocity') |> 
+  filter(velocity == min(velocity))
+
+saveVmax <- Vmax |> ungroup() |> select(Plate, well, chcc, .map_name, hours, velocity) #|>  head()
+
+write.csv(saveVmax, "Vmax.csv")
+```
+
+```{r}
+
+curves$well <- str_pad(curves$well, 2, pad = "0")
+
+p <- curves %>% 
+  filter(Plate == "Lc-29") %>%
+  filter(.map_name == "salt tolerance_b-milk_30_0") |>
+  ggplot(aes(x = hours, y = fit)) + 
+  geom_line(alpha = 0.1, aes(group = id))
+
+
+pdf("Lc-29.pdf", width=8, height=8)
+
+
+p <- p + facet_wrap("well") + theme(panel.grid = element_blank())
+
+Vmax$well <- str_pad(Vmax$well, 2, pad = "0")
+
+Vmax_filtered <- Vmax %>% 
+  filter(Plate == "Lc-29") %>%
+  filter(.map_name == "salt tolerance_b-milk_30_0")
+
+p01 <-  p +
+  #geom_point(data = Ta,
+  #             aes(x = Ta_hours, Ta_value),
+  #             colour = 'red',
+  #             size = 1) +
+  geom_segment(data = Vmax_filtered,
+               aes(x = hours - 1,
+                   xend = hours + 1,
+                   y = pH - (velocity*60*1),
+                   yend = pH + (velocity*60*1)),
+               colour = 'blue',
+               alpha = 0.5)+
+  geom_point(data = Vmax_filtered, colour = 'blue', size = 1)
+
+
+p01
+
+
+
+```
+
+```{r}
+pdf("Lc-29_raw_curves.pdf", width=12, height=8)
+
+raw_curves_filtered <- raw_curves %>% 
+  filter(Plate == "Lc-29") %>%
+  filter(.map_name == "salt tolerance_b-milk_30_0")
+
+raw_curves_filtered$well <- str_pad(raw_curves_filtered$well, 2, pad = "0")
+
+raw_curves_filtered |>
+  ggplot(aes(x = hours, y = pH)) + 
+  facet_wrap("well") + theme(panel.grid = element_blank()) +
+  geom_line(alpha = 0.1, aes(group = id)) +
+  geom_segment(data = Vmax_filtered,
+               aes(x = hours - 1,
+                   xend = hours + 1,
+                   y = pH - (velocity*60*1),
+                   yend = pH + (velocity*60*1)),
+               colour = 'blue',
+               alpha = 0.5)+
+  geom_point(data = Vmax_filtered, colour = 'blue', size = 1)
+```
+
+# Jannik's
+
+\
+First, we need to prepare the raw curves, including wrangling the data from the a wide to a long format, apply an appropriate grouping (one group per curve), and smooth the individual curves in each group.\
+The data we are interested in are on "Plate 1". We prepare the data and plot the smooth curves to get an overview:
+
+```{r}
+raw <- data_raw$.raw
+
+raw_curves <- raw |> filter(Plate == 1) |>
+  pivot_longer(cols = starts_with('X'),
+               names_to = 'minutes',
+               values_to = 'pH') |> 
+  mutate(minutes = parse_number(minutes),
+         hours = minutes / 60) |> 
+  group_by(across(-c(minutes, hours, pH))) |> 
+  mutate(id = cur_group_id())
+
+curves <- raw_curves |> 
+  smooth_spline(minutes, pH, as = 'fit') |> 
+  mutate(res = pH - fit)
+
+p <- curves |>
+  ggplot(aes(x = hours, y = fit)) + 
+  geom_line(alpha = 0.1, aes(group = id))
+
+p
+```
+
+And we inspect the residuals as well:
+
+```{r}
+curves |>
+  ggplot(aes(x = hours, y = res, group = id)) + 
+  geom_line(alpha = 0.1)
+```
+
+The out of-the-box smoothing looks nice and random without systematic patterns.
+
+# Ta
+
+\
+We can now calculate the Ta from the smoothed curves by using the \*lag_phase\* function
+
+```{r}
+Ta <- curves |> 
+  lag_phase(x = minutes, y = fit, wait = 15, change = -0.08, as = 'Ta') |> 
+  mutate(Ta_hours = Ta_time / 60)
+
+Ta |> ungroup() |> select(Hor., Ver., Ta_time, Ta_hours, Ta_value) |>  head()
+```
+
+The \*wait\* parameter tells the function how long to wait before calculating a \*change\*. \*wait\* and \*change\* are in the units of \*x\* and \*y\*, respectively.
+
+# Vmax
+
+\
+To calculate the maximum velocity (Vmax) we need first to calculate the curve derivative to find the point where the curve changes the most.
+
+```{r}
+Vmax <- curves |> 
+  grad(x = minutes, y = fit, as = 'velocity') |> 
+  filter(velocity == min(velocity))
+
+Vmax |> ungroup() |> select(Hor., Ver., minutes, hours, velocity) |> head()
+```
+
+# Time to pH and pH after x hours
+
+\
+We can use \*interpolate\* to calculate the time to pH and the pH after \*x\* hours.\
+To find the pH after 15 minutes and after every hour from 1 to 16, we use \*at\* = c(15/60, 1:16).\
+
+```{r}
+T2pH <- curves |> 
+  interpolate(x = hours, y = fit, at = c(15/60, 1:16), as = 'pH')
+
+T2pH |> ungroup() |>  select(Hor., Ver., hours, pH) |>  head()
+```
+
+\
+Likewise, to find the time to pH 4.5, 5, 5.5, and 6:
+
+```{r}
+pH <- curves |> 
+  interpolate(x = fit, y = hours, at = c(6, 5.5, 5, 4.5), as = 'hours')
+
+pH |> ungroup() |>  select(Hor., Ver., fit, hours) |>  head()
+```
+
+# Plot the features
+
+\
+Let's see if the found Ta and Vmax features make sense, by adding the points and value we have found to the curves we plotted before.\
+
+```{r}
+p <- p + facet_grid(Hor. ~ Ver.) + theme(panel.grid = element_blank())
+
+p01 <- p + geom_point(data = Ta,
+               aes(x = Ta_hours, Ta_value),
+               colour = 'red',
+               size = 1) +
+  geom_segment(data = Vmax,
+               aes(x = hours - 1,
+                   xend = hours + 1,
+                   y = pH - (velocity*60*1),
+                   yend = pH + (velocity*60*1)),
+               colour = 'blue',
+               alpha = 0.5)+
+  geom_point(data = Vmax, colour = 'blue', size = 1)
+
+p01
+```
+
+\
+Zooming in parts of the curves we see they fit very well.
+
+```{r}
+p01 + coord_cartesian(xlim = c(0,3), ,ylim = c(6,7))
+p01 + coord_cartesian(xlim = c(5,10), ,ylim = c(5,6))
+```
+
+\
