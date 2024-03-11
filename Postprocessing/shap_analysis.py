@@ -12,7 +12,7 @@ from sklearn.model_selection import GroupShuffleSplit
 from sklearn.ensemble import RandomForestRegressor
 
 # user-defined scrips
-PROJECT_DIR = "/home/dktmpalzu/lactococcus_proj/"
+PROJECT_DIR = "XXX"
 
 import sys
 sys.path.append(PROJECT_DIR)
@@ -21,7 +21,7 @@ from Models.tree_based import RF_DEFAULT_PARS
 
 IN_DATA_PATH = PROJECT_DIR + "Data/Processed/"
 OUT_DATA_PATH = PROJECT_DIR + "Data/Results/RandomForest_Training/FS_Testing_3/SHAP/"
-RESULTS_DIR = "/home/dktmpalzu/lactococcus_proj/Data/Results/RandomForest_FeatureSelection/FS_Testing_3/"
+RESULTS_DIR = "XXX/Data/Results/RandomForest_FeatureSelection/FS_Testing_3/"
 
 
 parser = argparse.ArgumentParser(description="")
@@ -282,15 +282,5 @@ for algo, best_pos in experiment_data.items():
 
         with open(OUT_DATA_PATH + f"{out_file_id}.pkl", "wb") as pkl_file:
             pickle.dump(shap_expl_obj, pkl_file)
-
-        #shap_values = shap_expl_obj.values
-        #shap_base_values = shap_expl_obj.base_values
-        #shap_data = shap_expl_obj.data
-        #shap_feature_names = shap_expl_obj.feature_names
-
-        #np.savetxt(OUT_DATA_PATH + f"{out_file_id}_values.txt", shap_values, fmt='%s')
-        #np.savetxt(OUT_DATA_PATH + f"{out_file_id}_base_values.txt", shap_base_values, fmt='%s')
-        #np.savetxt(OUT_DATA_PATH + f"{out_file_id}_data.txt", shap_data, fmt='%s')
-        #np.savetxt(OUT_DATA_PATH + f"{out_file_id}_feature_names.txt", shap_feature_names, fmt='%s')
 
 print("\nFinished evaluating positions.\n")
