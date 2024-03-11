@@ -6,5 +6,6 @@ Experimenting/
 CodeDev.ipynb
 Hornet IP-Adress.txt
 salt_tolerance_ML_11-mers_v4_minimal.html
-**/.joblib
 Preprocessing/Acidification_curves.Rmd
+Training/rf_11mer_all_filtered_firemic_lshade_bestpos_fst3.joblib
+Training/rf_11mer_all_filtered_firemic_aeowdmoa_bestpos_fst3.joblib
