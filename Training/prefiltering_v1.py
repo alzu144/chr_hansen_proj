@@ -5,7 +5,7 @@ import pandas as pd
 from scipy import sparse
 
 # user-defined scrips
-PROJECT_DIR = "/home/dktmpalzu/lactococcus_proj/"
+PROJECT_DIR = "Updated project path"
 
 import sys
 sys.path.append(PROJECT_DIR)
