@@ -10,7 +10,7 @@ from sklearn.model_selection import GroupShuffleSplit
 from sklearn.ensemble import RandomForestRegressor
 
 # user-defined scrips
-PROJECT_DIR = "/home/dktmpalzu/lactococcus_proj/"
+PROJECT_DIR = "XXX"
 
 import sys
 sys.path.append(PROJECT_DIR)
