@@ -1,0 +1,10 @@
+Analysis/
+Experimenting/
+"Source Code"/
+**/__pycache__
+.ipynb_checkpoints
+CodeDev.ipynb
+Hornet IP-Adress.txt
+salt_tolerance_ML_11-mers_v4_minimal.html
+**/.joblib
+Preprocessing/Acidification_curves.Rmd
