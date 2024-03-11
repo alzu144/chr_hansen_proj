@@ -9,7 +9,7 @@ from scipy import sparse
 from sklearn.model_selection import GroupShuffleSplit
 
 # user-defined scrips
-PROJECT_DIR = "/home/dktmpalzu/lactococcus_proj/"
+PROJECT_DIR = "XXX"
 
 import sys
 sys.path.append(PROJECT_DIR)
