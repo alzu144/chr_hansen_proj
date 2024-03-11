@@ -14,7 +14,7 @@ from mealpy.evolutionary_based.SHADE import L_SHADE
 from mealpy.swarm_based.PSO import P_PSO
 
 # user-defined scrips
-PROJECT_DIR = "/home/dktmpalzu/lactococcus_proj/"
+PROJECT_DIR = "XXX"
 
 import sys
 sys.path.append(PROJECT_DIR)
